@@ -11,7 +11,11 @@ from typing import Literal, Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr, field_validator
+import re
+
+from pydantic import BaseModel, field_validator
+
+_EMAIL_RE = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -130,7 +134,7 @@ class EmpreendimentoCreate(BaseModel):
     nome_empreendedor: str
     municipio: str
     segmento: Literal["Tecnologia", "Com\u00e9rcio", "Ind\u00fastria", "Servi\u00e7os", "Agroneg\u00f3cio"]
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     status: Literal["ativo", "inativo"] = "ativo"
 
     @field_validator("nome_empreendimento", "nome_empreendedor")
@@ -148,6 +152,13 @@ class EmpreendimentoCreate(BaseModel):
             raise ValueError(
                 f"Munic\u00edpio '{v}' n\u00e3o \u00e9 um munic\u00edpio v\u00e1lido de Santa Catarina"
             )
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _EMAIL_RE.match(v):
+            raise ValueError("Formato de email inválido")
         return v
 
 
@@ -158,7 +169,7 @@ class EmpreendimentoUpdate(BaseModel):
     nome_empreendedor: str
     municipio: str
     segmento: Literal["Tecnologia", "Com\u00e9rcio", "Ind\u00fastria", "Servi\u00e7os", "Agroneg\u00f3cio"]
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     status: Literal["ativo", "inativo"] = "ativo"
 
     @field_validator("nome_empreendimento", "nome_empreendedor")
@@ -176,6 +187,13 @@ class EmpreendimentoUpdate(BaseModel):
             raise ValueError(
                 f"Munic\u00edpio '{v}' n\u00e3o \u00e9 um munic\u00edpio v\u00e1lido de Santa Catarina"
             )
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _EMAIL_RE.match(v):
+            raise ValueError("Formato de email inválido")
         return v
 
 
