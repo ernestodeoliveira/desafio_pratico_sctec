@@ -1,13 +1,3 @@
-from fastapi import FastAPI
+"""Vercel serverless entrypoint — re-exports the FastAPI app."""
 
-app = FastAPI(title="Debug Test")
-
-
-@app.get("/")
-def root():
-    return {"status": "alive"}
-
-
-@app.get("/{path:path}")
-def catch(path: str):
-    return {"path": path}
+from app.main import app  # noqa: F401
