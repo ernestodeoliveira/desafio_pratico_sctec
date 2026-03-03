@@ -1,1 +1,5 @@
 fastapi
+python-dotenv
+pydantic[email-validator]
+python-multipart
+httpx
