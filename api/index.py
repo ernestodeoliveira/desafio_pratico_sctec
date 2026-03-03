@@ -1,3 +1,8 @@
-"""Vercel serverless entrypoint — re-exports the FastAPI app."""
+from fastapi import FastAPI
 
-from app.main import app  # noqa: F401
+app = FastAPI()
+
+
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "Vercel is working"}
