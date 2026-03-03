@@ -1,18 +1,13 @@
-"""Vercel serverless entrypoint — diagnose import errors."""
+from fastapi import FastAPI
 
-import traceback
+app = FastAPI(title="Debug Test")
 
-try:
-    from app.main import app
-except Exception as e:
-    from fastapi import FastAPI
-    app = FastAPI()
-    _error = traceback.format_exc()
 
-    @app.get("/")
-    def error_handler():
-        return {"error": str(e), "type": type(e).__name__, "traceback": _error}
+@app.get("/")
+def root():
+    return {"status": "alive"}
 
-    @app.get("/{path:path}")
-    def catch_all(path: str):
-        return {"error": str(e), "type": type(e).__name__, "traceback": _error}
+
+@app.get("/{path:path}")
+def catch(path: str):
+    return {"path": path}
