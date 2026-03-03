@@ -1,3 +1,9 @@
 fastapi
 httpx
 python-multipart
+uvicorn
+python-dotenv
+pydantic
+email-validator
+pytest
+pytest-asyncio
