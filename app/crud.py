@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.supabase_client import supabase
+from app.supabase_client import get_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ TABLE = "empreendimentos"
 async def create_empreendimento(data: dict) -> dict:
     """Insert a new empreendimento into the database."""
     logger.info("Creating empreendimento: %s", data.get("nome_empreendimento"))
-    response = supabase.table(TABLE).insert(data).execute()
+    response = get_supabase().table(TABLE).insert(data).execute()
     return response.data[0]
 
 
@@ -24,7 +24,7 @@ async def get_empreendimentos(
     offset: int = 0,
 ) -> list[dict]:
     """List empreendimentos with optional filters and pagination."""
-    query = supabase.table(TABLE).select("*")
+    query = get_supabase().table(TABLE).select("*")
 
     if municipio:
         query = query.eq("municipio", municipio)
@@ -41,7 +41,7 @@ async def get_empreendimentos(
 
 async def get_empreendimento_by_id(id: int) -> Optional[dict]:
     """Fetch a single empreendimento by ID."""
-    response = supabase.table(TABLE).select("*").eq("id", id).execute()
+    response = get_supabase().table(TABLE).select("*").eq("id", id).execute()
     if not response.data:
         return None
     return response.data[0]
@@ -50,7 +50,7 @@ async def get_empreendimento_by_id(id: int) -> Optional[dict]:
 async def update_empreendimento(id: int, data: dict) -> Optional[dict]:
     """Update an existing empreendimento."""
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    response = supabase.table(TABLE).update(data).eq("id", id).execute()
+    response = get_supabase().table(TABLE).update(data).eq("id", id).execute()
     if not response.data:
         return None
     logger.info("Updated empreendimento %d", id)
@@ -59,7 +59,7 @@ async def update_empreendimento(id: int, data: dict) -> Optional[dict]:
 
 async def delete_empreendimento(id: int) -> bool:
     """Delete an empreendimento by ID."""
-    response = supabase.table(TABLE).delete().eq("id", id).execute()
+    response = get_supabase().table(TABLE).delete().eq("id", id).execute()
     if not response.data:
         return False
     logger.info("Deleted empreendimento %d", id)

@@ -48,7 +48,7 @@ class MockQuery:
 def mock_supabase(monkeypatch):
     """Provide a mocked supabase client."""
     mock_client = MagicMock()
-    monkeypatch.setattr("app.crud.supabase", mock_client)
+    monkeypatch.setattr("app.crud.get_supabase", lambda: mock_client)
     return mock_client
 
 
