@@ -1,10 +1,3 @@
-"""Vercel entrypoint — minimal test."""
+"""Alternative entrypoint — re-exports the FastAPI app from main."""
 
-from fastapi import FastAPI
-
-app = FastAPI(title="Test")
-
-
-@app.get("/")
-def root():
-    return {"status": "ok"}
+from app.main import app  # noqa: F401

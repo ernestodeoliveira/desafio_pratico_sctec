@@ -1,7 +1,5 @@
 {
-  "functions": {
-    "app/**/*.py": {
-      "excludeFiles": "{tests/**,__tests__/**,**/*.test.py,**/test_*.py,venv/**,.git/**}"
-    }
-  }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api" }
+  ]
 }
