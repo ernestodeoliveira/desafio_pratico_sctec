@@ -1,8 +1,1 @@
 fastapi
-uvicorn
-python-dotenv
-pydantic[email-validator]
-python-multipart
-httpx
-pytest
-pytest-asyncio
