@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -7,49 +7,51 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 
 
-class MockResponse:
-    """Mock for Supabase query responses."""
+class MockHttpxResponse:
+    """Mock for httpx response objects."""
 
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, data, status_code=200):
+        self._data = data
+        self.status_code = status_code
+
+    def json(self):
+        return self._data
+
+    def raise_for_status(self):
+        pass
 
 
-class MockQuery:
-    """Mock for Supabase query builder chain."""
+class MockHttpxClient:
+    """Mock httpx.Client that returns configured responses."""
 
     def __init__(self, data=None):
         self._data = data or []
 
-    def insert(self, data):
-        self._inserted = data
+    def __enter__(self):
         return self
 
-    def select(self, *args):
-        return self
+    def __exit__(self, *args):
+        pass
 
-    def update(self, data):
-        self._updated = data
-        return self
+    def get(self, *args, **kwargs):
+        return MockHttpxResponse(self._data)
 
-    def delete(self):
-        return self
+    def post(self, *args, **kwargs):
+        return MockHttpxResponse(self._data)
 
-    def eq(self, field, value):
-        return self
+    def patch(self, *args, **kwargs):
+        return MockHttpxResponse(self._data)
 
-    def range(self, start, end):
-        return self
-
-    def execute(self):
-        return MockResponse(self._data)
+    def delete(self, *args, **kwargs):
+        return MockHttpxResponse(self._data)
 
 
 @pytest.fixture
 def mock_supabase(monkeypatch):
-    """Provide a mocked supabase client."""
-    mock_client = MagicMock()
-    monkeypatch.setattr("app.crud.get_supabase", lambda: mock_client)
-    return mock_client
+    """Provide a mocked httpx client for Supabase REST calls."""
+    mock_fn = MagicMock()
+    monkeypatch.setattr("app.crud.get_client", mock_fn)
+    return mock_fn
 
 
 @pytest_asyncio.fixture

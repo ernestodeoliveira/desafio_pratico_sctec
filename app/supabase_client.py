@@ -1,15 +1,17 @@
-from typing import Optional
-
-from supabase import create_client, Client
+import httpx
 
 from app.config import settings
 
-_client: Optional[Client] = None
+_headers = {
+    "apikey": settings.SUPABASE_KEY,
+    "Authorization": f"Bearer {settings.SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation",
+}
+
+BASE_URL = f"{settings.SUPABASE_URL}/rest/v1"
 
 
-def get_supabase() -> Client:
-    """Lazy-initialize the Supabase client on first use."""
-    global _client
-    if _client is None:
-        _client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-    return _client
+def get_client() -> httpx.Client:
+    """Return a configured httpx client for Supabase REST API."""
+    return httpx.Client(base_url=BASE_URL, headers=_headers, timeout=10.0)

@@ -1,50 +1,11 @@
 import pytest
-from unittest.mock import MagicMock
 
-from tests.conftest import SAMPLE_EMPREENDIMENTO
-
-
-class MockResponse:
-    def __init__(self, data):
-        self.data = data
-
-
-class MockQueryBuilder:
-    def __init__(self, data):
-        self._data = data
-
-    def insert(self, data):
-        return self
-
-    def select(self, *args):
-        return self
-
-    def update(self, data):
-        return self
-
-    def delete(self):
-        return self
-
-    def eq(self, field, value):
-        return self
-
-    def range(self, start, end):
-        return self
-
-    def execute(self):
-        return MockResponse(self._data)
-
-
-def _mock_table(data):
-    """Create a mock supabase.table() that returns chained query builder."""
-    mock_client = MagicMock()
-    mock_client.table.return_value = MockQueryBuilder(data)
-    return mock_client
+from tests.conftest import SAMPLE_EMPREENDIMENTO, MockHttpxClient
 
 
 @pytest.mark.asyncio
 async def test_create_empreendimento(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([SAMPLE_EMPREENDIMENTO])
+    mock_supabase.return_value = MockHttpxClient([SAMPLE_EMPREENDIMENTO])
 
     payload = {
         "nome_empreendimento": "Tech Solutions SC",
@@ -73,7 +34,7 @@ async def test_create_invalid_municipio(client):
 
 @pytest.mark.asyncio
 async def test_list_empreendimentos(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([SAMPLE_EMPREENDIMENTO])
+    mock_supabase.return_value = MockHttpxClient([SAMPLE_EMPREENDIMENTO])
 
     response = await client.get("/empreendimentos/")
     assert response.status_code == 200
@@ -82,7 +43,7 @@ async def test_list_empreendimentos(client, mock_supabase):
 
 @pytest.mark.asyncio
 async def test_get_by_id(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([SAMPLE_EMPREENDIMENTO])
+    mock_supabase.return_value = MockHttpxClient([SAMPLE_EMPREENDIMENTO])
 
     response = await client.get("/empreendimentos/1")
     assert response.status_code == 200
@@ -91,7 +52,7 @@ async def test_get_by_id(client, mock_supabase):
 
 @pytest.mark.asyncio
 async def test_get_not_found(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([])
+    mock_supabase.return_value = MockHttpxClient([])
 
     response = await client.get("/empreendimentos/999")
     assert response.status_code == 404
@@ -99,7 +60,7 @@ async def test_get_not_found(client, mock_supabase):
 
 @pytest.mark.asyncio
 async def test_update_empreendimento(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([SAMPLE_EMPREENDIMENTO])
+    mock_supabase.return_value = MockHttpxClient([SAMPLE_EMPREENDIMENTO])
 
     payload = {
         "nome_empreendimento": "Tech Solutions SC Updated",
@@ -115,7 +76,7 @@ async def test_update_empreendimento(client, mock_supabase):
 
 @pytest.mark.asyncio
 async def test_delete_empreendimento(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([SAMPLE_EMPREENDIMENTO])
+    mock_supabase.return_value = MockHttpxClient([SAMPLE_EMPREENDIMENTO])
 
     response = await client.delete("/empreendimentos/1")
     assert response.status_code == 204
@@ -123,7 +84,7 @@ async def test_delete_empreendimento(client, mock_supabase):
 
 @pytest.mark.asyncio
 async def test_delete_not_found(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([])
+    mock_supabase.return_value = MockHttpxClient([])
 
     response = await client.delete("/empreendimentos/999")
     assert response.status_code == 404
@@ -131,7 +92,7 @@ async def test_delete_not_found(client, mock_supabase):
 
 @pytest.mark.asyncio
 async def test_list_with_filters(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([SAMPLE_EMPREENDIMENTO])
+    mock_supabase.return_value = MockHttpxClient([SAMPLE_EMPREENDIMENTO])
 
     response = await client.get(
         "/empreendimentos/?municipio=Florianópolis&segmento=Tecnologia&status=ativo"
@@ -141,7 +102,7 @@ async def test_list_with_filters(client, mock_supabase):
 
 @pytest.mark.asyncio
 async def test_list_with_pagination(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([SAMPLE_EMPREENDIMENTO])
+    mock_supabase.return_value = MockHttpxClient([SAMPLE_EMPREENDIMENTO])
 
     response = await client.get("/empreendimentos/?limit=5&offset=10")
     assert response.status_code == 200
@@ -150,7 +111,7 @@ async def test_list_with_pagination(client, mock_supabase):
 @pytest.mark.asyncio
 async def test_create_without_email(client, mock_supabase):
     sample_no_email = {**SAMPLE_EMPREENDIMENTO, "email": None}
-    mock_supabase.table.return_value = MockQueryBuilder([sample_no_email])
+    mock_supabase.return_value = MockHttpxClient([sample_no_email])
 
     payload = {
         "nome_empreendimento": "Test",
@@ -177,7 +138,7 @@ async def test_create_invalid_segmento(client):
 
 @pytest.mark.asyncio
 async def test_update_not_found(client, mock_supabase):
-    mock_supabase.table.return_value = MockQueryBuilder([])
+    mock_supabase.return_value = MockHttpxClient([])
 
     payload = {
         "nome_empreendimento": "Test",
