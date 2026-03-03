@@ -1,5 +1,4 @@
 fastapi
 httpx
-python-dotenv
 pydantic[email-validator]
 python-multipart
