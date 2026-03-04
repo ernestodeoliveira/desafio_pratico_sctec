@@ -1,12 +1,12 @@
-import os
-
 import httpx
+
+from app.config import settings
 
 
 def get_client() -> httpx.AsyncClient:
     """Return a configured async httpx client for Supabase REST API."""
-    url = os.environ.get("SUPABASE_URL", "")
-    key = os.environ.get("SUPABASE_KEY", "")
+    url = settings.SUPABASE_URL
+    key = settings.SUPABASE_KEY
     return httpx.AsyncClient(
         base_url=f"{url}/rest/v1",
         headers={
