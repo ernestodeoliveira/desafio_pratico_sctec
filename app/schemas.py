@@ -70,10 +70,6 @@ MUNICIPIOS_SC: list[str] = [
     "Xavantina", "Xaxim", "Zortéa",
 ]
 
-SEGMENTOS: list[str] = [
-    "Tecnologia", "Comércio", "Indústria", "Serviços", "Agronegócio",
-]
-
 
 class _EmpreendimentoBase(BaseModel):
     """Shared fields and validators for empreendimento schemas."""

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from app.supabase_client import get_client
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 TABLE = "empreendimentos"
 
 
-async def create_empreendimento(data: dict) -> dict:
+async def create_empreendimento(data: dict[str, Any]) -> dict[str, Any]:
     """Insert a new empreendimento into the database."""
     logger.info("Creating empreendimento: %s", data.get("nome_empreendimento"))
     async with get_client() as client:
@@ -24,9 +24,9 @@ async def get_empreendimentos(
     status: Optional[str] = None,
     limit: int = 10,
     offset: int = 0,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """List empreendimentos with optional filters and pagination."""
-    params: dict = {"select": "*", "order": "id.asc"}
+    params: dict[str, str] = {"select": "*", "order": "id.asc"}
 
     if municipio:
         params["municipio"] = f"eq.{municipio}"
@@ -45,7 +45,7 @@ async def get_empreendimentos(
         return result
 
 
-async def get_empreendimento_by_id(id: int) -> Optional[dict]:
+async def get_empreendimento_by_id(id: int) -> Optional[dict[str, Any]]:
     """Fetch a single empreendimento by ID."""
     async with get_client() as client:
         response = await client.get(f"/{TABLE}", params={"id": f"eq.{id}", "select": "*"})
@@ -56,7 +56,7 @@ async def get_empreendimento_by_id(id: int) -> Optional[dict]:
         return data[0]
 
 
-async def update_empreendimento(id: int, data: dict) -> Optional[dict]:
+async def update_empreendimento(id: int, data: dict[str, Any]) -> Optional[dict[str, Any]]:
     """Update an existing empreendimento."""
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     async with get_client() as client:
