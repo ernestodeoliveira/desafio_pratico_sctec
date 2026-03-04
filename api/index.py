@@ -5,14 +5,13 @@ Single self-contained file -- NO imports from ``app/``.
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-import re
-
 from pydantic import BaseModel, field_validator
 
 _EMAIL_RE = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
@@ -32,11 +31,11 @@ logger = logging.getLogger(__name__)
 TABLE = "empreendimentos"
 
 
-def _get_client() -> httpx.Client:
-    """Return a configured httpx client for the Supabase REST API."""
+def _get_client() -> httpx.AsyncClient:
+    """Return a configured async httpx client for the Supabase REST API."""
     url = os.environ.get("SUPABASE_URL", "")
     key = os.environ.get("SUPABASE_KEY", "")
-    return httpx.Client(
+    return httpx.AsyncClient(
         base_url=f"{url}/rest/v1",
         headers={
             "apikey": key,
@@ -52,74 +51,74 @@ def _get_client() -> httpx.Client:
 # Municipalities constant (295 SC municipalities)
 # ---------------------------------------------------------------------------
 MUNICIPIOS_SC: list[str] = [
-    "Abdon Batista", "Abelardo Luz", "Agrol\u00e2ndia", "Agron\u00f4mica", "\u00c1gua Doce",
-    "\u00c1guas de Chapec\u00f3", "\u00c1guas Frias", "\u00c1guas Mornas", "Alfredo Wagner",
-    "Alto Bela Vista", "Anchieta", "Angelina", "Anita Garibaldi", "Anit\u00e1polis",
-    "Ant\u00f4nio Carlos", "Api\u00fana", "Arabut\u00e3", "Araquari", "Ararangu\u00e1", "Armaz\u00e9m",
+    "Abdon Batista", "Abelardo Luz", "Agrolândia", "Agronômica", "Água Doce",
+    "Águas de Chapecó", "Águas Frias", "Águas Mornas", "Alfredo Wagner",
+    "Alto Bela Vista", "Anchieta", "Angelina", "Anita Garibaldi", "Anitápolis",
+    "Antônio Carlos", "Apiúna", "Arabutã", "Araquari", "Araranguá", "Armazém",
     "Arroio Trinta", "Arvoredo", "Ascurra", "Atalanta", "Aurora",
-    "Balne\u00e1rio Arroio do Silva", "Balne\u00e1rio Barra do Sul", "Balne\u00e1rio Cambori\u00fa",
-    "Balne\u00e1rio Gaivota", "Balne\u00e1rio Pi\u00e7arras", "Balne\u00e1rio Rinc\u00e3o", "Bandeirante",
+    "Balneário Arroio do Silva", "Balneário Barra do Sul", "Balneário Camboriú",
+    "Balneário Gaivota", "Balneário Piçarras", "Balneário Rincão", "Bandeirante",
     "Barra Bonita", "Barra Velha", "Bela Vista do Toldo", "Belmonte",
-    "Benedito Novo", "Bigua\u00e7u", "Blumenau", "Bocaina do Sul",
+    "Benedito Novo", "Biguaçu", "Blumenau", "Bocaina do Sul",
     "Bom Jardim da Serra", "Bom Jesus", "Bom Jesus do Oeste", "Bom Retiro",
-    "Bombinhas", "Botuver\u00e1", "Bra\u00e7o do Norte", "Bra\u00e7o do Trombudo",
-    "Brun\u00f3polis", "Brusque", "Ca\u00e7ador", "Caibi", "Calmon", "Cambori\u00fa",
-    "Campo Alegre", "Campo Belo do Sul", "Campo Er\u00ea", "Campos Novos",
-    "Canelinha", "Canoinhas", "Cap\u00e3o Alto", "Capinzal", "Capivari de Baixo",
+    "Bombinhas", "Botuverá", "Braço do Norte", "Braço do Trombudo",
+    "Brunópolis", "Brusque", "Caçador", "Caibi", "Calmon", "Camboriú",
+    "Campo Alegre", "Campo Belo do Sul", "Campo Erê", "Campos Novos",
+    "Canelinha", "Canoinhas", "Capão Alto", "Capinzal", "Capivari de Baixo",
     "Catanduvas", "Caxambu do Sul", "Celso Ramos", "Cerro Negro",
-    "Chapad\u00e3o do Lageado", "Chapec\u00f3", "Cocal do Sul", "Conc\u00f3rdia",
+    "Chapadão do Lageado", "Chapecó", "Cocal do Sul", "Concórdia",
     "Cordilheira Alta", "Coronel Freitas", "Coronel Martins", "Correia Pinto",
-    "Corup\u00e1", "Crici\u00fama", "Cunha Por\u00e3", "Cunhata\u00ed", "Curitibanos", "Descanso",
-    "Dion\u00edsio Cerqueira", "Dona Emma", "Doutor Pedrinho", "Entre Rios", "Ermo",
-    "Erval Velho", "Faxinal dos Guedes", "Flor do Sert\u00e3o", "Florian\u00f3polis",
-    "Formosa do Sul", "Forquilhinha", "Fraiburgo", "Frei Rog\u00e9rio", "Galv\u00e3o",
-    "Garopaba", "Garuva", "Gaspar", "Governador Celso Ramos", "Gr\u00e3o-Par\u00e1",
-    "Gravatal", "Guabiruba", "Guaraciaba", "Guaramirim", "Guaruj\u00e1 do Sul",
-    "Guatambu", "Herval d'Oeste", "Ibiam", "Ibicar\u00e9", "Ibirama", "I\u00e7ara",
-    "Ilhota", "Imaru\u00ed", "Imbituba", "Imbuia", "Indaial", "Iomer\u00ea", "Ipira",
-    "Ipor\u00e3 do Oeste", "Ipua\u00e7u", "Ipumirim", "Iraceminha", "Irani", "Irati",
-    "Irine\u00f3polis", "It\u00e1", "Itai\u00f3polis", "Itaja\u00ed", "Itapema", "Itapiranga",
-    "Itapo\u00e1", "Ituporanga", "Jabor\u00e1", "Jacinto Machado", "Jaguaruna",
-    "Jaragu\u00e1 do Sul", "Jardin\u00f3polis", "Joa\u00e7aba", "Joinville", "Jos\u00e9 Boiteux",
-    "Jupi\u00e1", "Lacerd\u00f3polis", "Lages", "Laguna", "Lajeado Grande", "Laurentino",
-    "Lauro M\u00fcller", "Lebon R\u00e9gis", "Leoberto Leal", "Lind\u00f3ia do Sul", "Lontras",
+    "Corupá", "Criciúma", "Cunha Porã", "Cunhataí", "Curitibanos", "Descanso",
+    "Dionísio Cerqueira", "Dona Emma", "Doutor Pedrinho", "Entre Rios", "Ermo",
+    "Erval Velho", "Faxinal dos Guedes", "Flor do Sertão", "Florianópolis",
+    "Formosa do Sul", "Forquilhinha", "Fraiburgo", "Frei Rogério", "Galvão",
+    "Garopaba", "Garuva", "Gaspar", "Governador Celso Ramos", "Grão-Pará",
+    "Gravatal", "Guabiruba", "Guaraciaba", "Guaramirim", "Guarujá do Sul",
+    "Guatambu", "Herval d'Oeste", "Ibiam", "Ibicaré", "Ibirama", "Içara",
+    "Ilhota", "Imaruí", "Imbituba", "Imbuia", "Indaial", "Iomerê", "Ipira",
+    "Iporã do Oeste", "Ipuaçu", "Ipumirim", "Iraceminha", "Irani", "Irati",
+    "Irineópolis", "Itá", "Itaiópolis", "Itajaí", "Itapema", "Itapiranga",
+    "Itapoá", "Ituporanga", "Jaborá", "Jacinto Machado", "Jaguaruna",
+    "Jaraguá do Sul", "Jardinópolis", "Joaçaba", "Joinville", "José Boiteux",
+    "Jupiá", "Lacerdópolis", "Lages", "Laguna", "Lajeado Grande", "Laurentino",
+    "Lauro Müller", "Lebon Régis", "Leoberto Leal", "Lindóia do Sul", "Lontras",
     "Luiz Alves", "Luzerna", "Macieira", "Mafra", "Major Gercino",
-    "Major Vieira", "Maracaj\u00e1", "Maravilha", "Marema", "Massaranduba",
-    "Matos Costa", "Meleiro", "Mirim Doce", "Modelo", "Monda\u00ed", "Monte Carlo",
-    "Monte Castelo", "Morro da Fuma\u00e7a", "Morro Grande", "Navegantes",
+    "Major Vieira", "Maracajá", "Maravilha", "Marema", "Massaranduba",
+    "Matos Costa", "Meleiro", "Mirim Doce", "Modelo", "Mondaí", "Monte Carlo",
+    "Monte Castelo", "Morro da Fumaça", "Morro Grande", "Navegantes",
     "Nova Erechim", "Nova Itaberaba", "Nova Trento", "Nova Veneza",
-    "Novo Horizonte", "Orleans", "Otac\u00edlio Costa", "Ouro", "Ouro Verde",
-    "Paial", "Painel", "Palho\u00e7a", "Palma Sola", "Palmeira", "Palmitos",
-    "Papanduva", "Para\u00edso", "Passo de Torres", "Passos Maia", "Paulo Lopes",
-    "Pedras Grandes", "Penha", "Peritiba", "Pescaria Brava", "Petrol\u00e2ndia",
+    "Novo Horizonte", "Orleans", "Otacílio Costa", "Ouro", "Ouro Verde",
+    "Paial", "Painel", "Palhoça", "Palma Sola", "Palmeira", "Palmitos",
+    "Papanduva", "Paraíso", "Passo de Torres", "Passos Maia", "Paulo Lopes",
+    "Pedras Grandes", "Penha", "Peritiba", "Pescaria Brava", "Petrolândia",
     "Pinhalzinho", "Pinheiro Preto", "Piratuba", "Planalto Alegre", "Pomerode",
     "Ponte Alta", "Ponte Alta do Norte", "Ponte Serrada", "Porto Belo",
-    "Porto Uni\u00e3o", "Pouso Redondo", "Praia Grande",
-    "Presidente Castello Branco", "Presidente Get\u00falio", "Presidente Nereu",
+    "Porto União", "Pouso Redondo", "Praia Grande",
+    "Presidente Castello Branco", "Presidente Getúlio", "Presidente Nereu",
     "Princesa", "Quilombo", "Rancho Queimado", "Rio das Antas", "Rio do Campo",
     "Rio do Oeste", "Rio do Sul", "Rio dos Cedros", "Rio Fortuna",
-    "Rio Negrinho", "Rio Rufino", "Riqueza", "Rodeio", "Romel\u00e2ndia", "Salete",
-    "Saltinho", "Salto Veloso", "Sang\u00e3o", "Santa Cec\u00edlia", "Santa Helena",
+    "Rio Negrinho", "Rio Rufino", "Riqueza", "Rodeio", "Romelândia", "Salete",
+    "Saltinho", "Salto Veloso", "Sangão", "Santa Cecília", "Santa Helena",
     "Santa Rosa de Lima", "Santa Rosa do Sul", "Santa Terezinha",
     "Santa Terezinha do Progresso", "Santiago do Sul",
-    "Santo Amaro da Imperatriz", "S\u00e3o Bento do Sul", "S\u00e3o Bernardino",
-    "S\u00e3o Bonif\u00e1cio", "S\u00e3o Carlos", "S\u00e3o Crist\u00f3v\u00e3o do Sul", "S\u00e3o Domingos",
-    "S\u00e3o Francisco do Sul", "S\u00e3o Jo\u00e3o Batista", "S\u00e3o Jo\u00e3o do Itaperi\u00fa",
-    "S\u00e3o Jo\u00e3o do Oeste", "S\u00e3o Jo\u00e3o do Sul", "S\u00e3o Joaquim", "S\u00e3o Jos\u00e9",
-    "S\u00e3o Jos\u00e9 do Cedro", "S\u00e3o Jos\u00e9 do Cerrito", "S\u00e3o Louren\u00e7o do Oeste",
-    "S\u00e3o Ludgero", "S\u00e3o Martinho", "S\u00e3o Miguel da Boa Vista",
-    "S\u00e3o Miguel do Oeste", "S\u00e3o Pedro de Alc\u00e2ntara", "Saudades", "Schroeder",
-    "Seara", "Serra Alta", "Sider\u00f3polis", "Sombrio", "Sul Brasil", "Tai\u00f3",
-    "Tangar\u00e1", "Tigrinhos", "Tijucas", "Timb\u00e9 do Sul", "Timb\u00f3",
-    "Timb\u00f3 Grande", "Tr\u00eas Barras", "Treviso", "Treze de Maio", "Treze T\u00edlias",
-    "Trombudo Central", "Tubar\u00e3o", "Tun\u00e1polis", "Turvo", "Uni\u00e3o do Oeste",
-    "Urubici", "Urupema", "Urussanga", "Varge\u00e3o", "Vargem", "Vargem Bonita",
-    "Vidal Ramos", "Videira", "Vitor Meireles", "Witmarsum", "Xanxer\u00ea",
-    "Xavantina", "Xaxim", "Zort\u00e9a",
+    "Santo Amaro da Imperatriz", "São Bento do Sul", "São Bernardino",
+    "São Bonifácio", "São Carlos", "São Cristóvão do Sul", "São Domingos",
+    "São Francisco do Sul", "São João Batista", "São João do Itaperiú",
+    "São João do Oeste", "São João do Sul", "São Joaquim", "São José",
+    "São José do Cedro", "São José do Cerrito", "São Lourenço do Oeste",
+    "São Ludgero", "São Martinho", "São Miguel da Boa Vista",
+    "São Miguel do Oeste", "São Pedro de Alcântara", "Saudades", "Schroeder",
+    "Seara", "Serra Alta", "Siderópolis", "Sombrio", "Sul Brasil", "Taió",
+    "Tangará", "Tigrinhos", "Tijucas", "Timbé do Sul", "Timbó",
+    "Timbó Grande", "Três Barras", "Treviso", "Treze de Maio", "Treze Tílias",
+    "Trombudo Central", "Tubarão", "Tunápolis", "Turvo", "União do Oeste",
+    "Urubici", "Urupema", "Urussanga", "Vargeão", "Vargem", "Vargem Bonita",
+    "Vidal Ramos", "Videira", "Vitor Meireles", "Witmarsum", "Xanxerê",
+    "Xavantina", "Xaxim", "Zortéa",
 ]
 
 SEGMENTOS: list[str] = [
-    "Tecnologia", "Com\u00e9rcio", "Ind\u00fastria", "Servi\u00e7os", "Agroneg\u00f3cio",
+    "Tecnologia", "Comércio", "Indústria", "Serviços", "Agronegócio",
 ]
 
 # ---------------------------------------------------------------------------
@@ -127,74 +126,47 @@ SEGMENTOS: list[str] = [
 # ---------------------------------------------------------------------------
 
 
-class EmpreendimentoCreate(BaseModel):
+class _EmpreendimentoBase(BaseModel):
+    """Shared fields and validators for empreendimento schemas."""
+
+    nome_empreendimento: str
+    nome_empreendedor: str
+    municipio: str
+    segmento: Literal["Tecnologia", "Comércio", "Indústria", "Serviços", "Agronegócio"]
+    email: Optional[str] = None
+    status: Literal["ativo", "inativo"] = "ativo"
+
+    @field_validator("nome_empreendimento", "nome_empreendedor")
+    @classmethod
+    def validate_nome(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 1 or len(v) > 255:
+            raise ValueError("Nome deve ter entre 1 e 255 caracteres")
+        return v
+
+    @field_validator("municipio")
+    @classmethod
+    def validate_municipio(cls, v: str) -> str:
+        if v not in MUNICIPIOS_SC:
+            raise ValueError(
+                f"Município '{v}' não é um município válido de Santa Catarina"
+            )
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _EMAIL_RE.match(v):
+            raise ValueError("Formato de email inválido")
+        return v
+
+
+class EmpreendimentoCreate(_EmpreendimentoBase):
     """Schema for creating a new empreendimento."""
 
-    nome_empreendimento: str
-    nome_empreendedor: str
-    municipio: str
-    segmento: Literal["Tecnologia", "Com\u00e9rcio", "Ind\u00fastria", "Servi\u00e7os", "Agroneg\u00f3cio"]
-    email: Optional[str] = None
-    status: Literal["ativo", "inativo"] = "ativo"
 
-    @field_validator("nome_empreendimento", "nome_empreendedor")
-    @classmethod
-    def validate_nome(cls, v: str) -> str:
-        v = v.strip()
-        if len(v) < 1 or len(v) > 255:
-            raise ValueError("Nome deve ter entre 1 e 255 caracteres")
-        return v
-
-    @field_validator("municipio")
-    @classmethod
-    def validate_municipio(cls, v: str) -> str:
-        if v not in MUNICIPIOS_SC:
-            raise ValueError(
-                f"Munic\u00edpio '{v}' n\u00e3o \u00e9 um munic\u00edpio v\u00e1lido de Santa Catarina"
-            )
-        return v
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and not _EMAIL_RE.match(v):
-            raise ValueError("Formato de email inválido")
-        return v
-
-
-class EmpreendimentoUpdate(BaseModel):
+class EmpreendimentoUpdate(_EmpreendimentoBase):
     """Schema for fully updating an empreendimento."""
-
-    nome_empreendimento: str
-    nome_empreendedor: str
-    municipio: str
-    segmento: Literal["Tecnologia", "Com\u00e9rcio", "Ind\u00fastria", "Servi\u00e7os", "Agroneg\u00f3cio"]
-    email: Optional[str] = None
-    status: Literal["ativo", "inativo"] = "ativo"
-
-    @field_validator("nome_empreendimento", "nome_empreendedor")
-    @classmethod
-    def validate_nome(cls, v: str) -> str:
-        v = v.strip()
-        if len(v) < 1 or len(v) > 255:
-            raise ValueError("Nome deve ter entre 1 e 255 caracteres")
-        return v
-
-    @field_validator("municipio")
-    @classmethod
-    def validate_municipio(cls, v: str) -> str:
-        if v not in MUNICIPIOS_SC:
-            raise ValueError(
-                f"Munic\u00edpio '{v}' n\u00e3o \u00e9 um munic\u00edpio v\u00e1lido de Santa Catarina"
-            )
-        return v
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and not _EMAIL_RE.match(v):
-            raise ValueError("Formato de email inválido")
-        return v
 
 
 class EmpreendimentoResponse(BaseModel):
@@ -219,8 +191,8 @@ class EmpreendimentoResponse(BaseModel):
 async def create_empreendimento(data: dict) -> dict:
     """Insert a new empreendimento into the database."""
     logger.info("Creating empreendimento: %s", data.get("nome_empreendimento"))
-    with _get_client() as client:
-        response = client.post(f"/{TABLE}", json=data)
+    async with _get_client() as client:
+        response = await client.post(f"/{TABLE}", json=data)
         response.raise_for_status()
         return response.json()[0]
 
@@ -244,8 +216,8 @@ async def get_empreendimentos(
 
     headers = {"Range": f"{offset}-{offset + limit - 1}"}
 
-    with _get_client() as client:
-        response = client.get(f"/{TABLE}", params=params, headers=headers)
+    async with _get_client() as client:
+        response = await client.get(f"/{TABLE}", params=params, headers=headers)
         response.raise_for_status()
         result = response.json()
         logger.info("Listed %d empreendimentos", len(result))
@@ -254,8 +226,8 @@ async def get_empreendimentos(
 
 async def get_empreendimento_by_id(id: int) -> Optional[dict]:
     """Fetch a single empreendimento by ID."""
-    with _get_client() as client:
-        response = client.get(f"/{TABLE}", params={"id": f"eq.{id}", "select": "*"})
+    async with _get_client() as client:
+        response = await client.get(f"/{TABLE}", params={"id": f"eq.{id}", "select": "*"})
         response.raise_for_status()
         data = response.json()
         if not data:
@@ -266,8 +238,8 @@ async def get_empreendimento_by_id(id: int) -> Optional[dict]:
 async def update_empreendimento(id: int, data: dict) -> Optional[dict]:
     """Update an existing empreendimento."""
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    with _get_client() as client:
-        response = client.patch(
+    async with _get_client() as client:
+        response = await client.patch(
             f"/{TABLE}",
             params={"id": f"eq.{id}"},
             json=data,
@@ -282,8 +254,8 @@ async def update_empreendimento(id: int, data: dict) -> Optional[dict]:
 
 async def delete_empreendimento(id: int) -> bool:
     """Delete an empreendimento by ID."""
-    with _get_client() as client:
-        response = client.delete(
+    async with _get_client() as client:
+        response = await client.delete(
             f"/{TABLE}",
             params={"id": f"eq.{id}"},
         )
@@ -303,7 +275,7 @@ app = FastAPI(
     title="API Empreendimentos SC",
     description=(
         "API REST para gerenciamento de empreendimentos em Santa Catarina. "
-        "Permite opera\u00e7\u00f5es CRUD completas com valida\u00e7\u00e3o de munic\u00edpios, "
+        "Permite operações CRUD completas com validação de municípios, "
         "segmentos e filtros por query parameters."
     ),
     version="1.0.0",
@@ -324,7 +296,7 @@ app.add_middleware(
 
 
 @app.get("/", tags=["Health"])
-async def root():
+async def root() -> dict:
     """Health check endpoint."""
     return {"status": "ok", "message": "API Empreendimentos SC"}
 
@@ -335,9 +307,9 @@ async def root():
     status_code=status.HTTP_201_CREATED,
     tags=["Empreendimentos"],
     summary="Criar empreendimento",
-    description="Cria um novo empreendimento com valida\u00e7\u00e3o de munic\u00edpio e segmento.",
+    description="Cria um novo empreendimento com validação de município e segmento.",
 )
-async def create(data: EmpreendimentoCreate):
+async def create(data: EmpreendimentoCreate) -> EmpreendimentoResponse:
     logger.info("POST /empreendimentos/ - %s", data.nome_empreendimento)
     result = await create_empreendimento(data.model_dump(exclude_none=True))
     return result
@@ -348,15 +320,15 @@ async def create(data: EmpreendimentoCreate):
     response_model=list[EmpreendimentoResponse],
     tags=["Empreendimentos"],
     summary="Listar empreendimentos",
-    description="Lista empreendimentos com filtros opcionais por munic\u00edpio, segmento e status, com pagina\u00e7\u00e3o.",
+    description="Lista empreendimentos com filtros opcionais por município, segmento e status, com paginação.",
 )
 async def list_all(
-    municipio: Optional[str] = Query(None, description="Filtrar por munic\u00edpio de SC"),
+    municipio: Optional[str] = Query(None, description="Filtrar por município de SC"),
     segmento: Optional[str] = Query(None, description="Filtrar por segmento"),
     status_filter: Optional[str] = Query(None, alias="status", description="Filtrar por status (ativo/inativo)"),
     limit: int = Query(10, ge=1, le=100, description="Limite de resultados"),
-    offset: int = Query(0, ge=0, description="Offset para pagina\u00e7\u00e3o"),
-):
+    offset: int = Query(0, ge=0, description="Offset para paginação"),
+) -> list[EmpreendimentoResponse]:
     logger.info(
         "GET /empreendimentos/ - filters: municipio=%s, segmento=%s, status=%s",
         municipio, segmento, status_filter,
@@ -376,13 +348,13 @@ async def list_all(
     response_model=EmpreendimentoResponse,
     tags=["Empreendimentos"],
     summary="Buscar empreendimento por ID",
-    description="Retorna um empreendimento espec\u00edfico pelo seu ID.",
+    description="Retorna um empreendimento específico pelo seu ID.",
 )
-async def get_by_id(id: int):
+async def get_by_id(id: int) -> EmpreendimentoResponse:
     logger.info("GET /empreendimentos/%d", id)
     result = await get_empreendimento_by_id(id)
     if not result:
-        raise HTTPException(status_code=404, detail="Empreendimento n\u00e3o encontrado")
+        raise HTTPException(status_code=404, detail="Empreendimento não encontrado")
     return result
 
 
@@ -393,11 +365,11 @@ async def get_by_id(id: int):
     summary="Atualizar empreendimento",
     description="Atualiza completamente um empreendimento existente.",
 )
-async def update(id: int, data: EmpreendimentoUpdate):
+async def update(id: int, data: EmpreendimentoUpdate) -> EmpreendimentoResponse:
     logger.info("PUT /empreendimentos/%d", id)
     result = await update_empreendimento(id, data.model_dump(exclude_none=True))
     if not result:
-        raise HTTPException(status_code=404, detail="Empreendimento n\u00e3o encontrado")
+        raise HTTPException(status_code=404, detail="Empreendimento não encontrado")
     return result
 
 
@@ -408,8 +380,8 @@ async def update(id: int, data: EmpreendimentoUpdate):
     summary="Remover empreendimento",
     description="Remove um empreendimento pelo ID.",
 )
-async def delete(id: int):
+async def delete(id: int) -> Response:
     logger.info("DELETE /empreendimentos/%d", id)
     deleted = await delete_empreendimento(id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Empreendimento n\u00e3o encontrado")
+        raise HTTPException(status_code=404, detail="Empreendimento não encontrado")

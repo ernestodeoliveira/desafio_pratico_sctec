@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.crud import (
@@ -39,7 +39,7 @@ app.add_middleware(
 
 
 @app.get("/", tags=["Health"])
-async def root():
+async def root() -> dict:
     """Health check endpoint."""
     return {"status": "ok", "message": "API Empreendimentos SC"}
 
@@ -52,7 +52,7 @@ async def root():
     summary="Criar empreendimento",
     description="Cria um novo empreendimento com validação de município e segmento.",
 )
-async def create(data: EmpreendimentoCreate):
+async def create(data: EmpreendimentoCreate) -> EmpreendimentoResponse:
     logger.info("POST /empreendimentos/ - %s", data.nome_empreendimento)
     result = await create_empreendimento(data.model_dump(exclude_none=True))
     return result
@@ -71,7 +71,7 @@ async def list_all(
     status_filter: Optional[str] = Query(None, alias="status", description="Filtrar por status (ativo/inativo)"),
     limit: int = Query(10, ge=1, le=100, description="Limite de resultados"),
     offset: int = Query(0, ge=0, description="Offset para paginação"),
-):
+) -> list[EmpreendimentoResponse]:
     logger.info("GET /empreendimentos/ - filters: municipio=%s, segmento=%s, status=%s", municipio, segmento, status_filter)
     results = await get_empreendimentos(
         municipio=municipio,
@@ -90,7 +90,7 @@ async def list_all(
     summary="Buscar empreendimento por ID",
     description="Retorna um empreendimento específico pelo seu ID.",
 )
-async def get_by_id(id: int):
+async def get_by_id(id: int) -> EmpreendimentoResponse:
     logger.info("GET /empreendimentos/%d", id)
     result = await get_empreendimento_by_id(id)
     if not result:
@@ -105,7 +105,7 @@ async def get_by_id(id: int):
     summary="Atualizar empreendimento",
     description="Atualiza completamente um empreendimento existente.",
 )
-async def update(id: int, data: EmpreendimentoUpdate):
+async def update(id: int, data: EmpreendimentoUpdate) -> EmpreendimentoResponse:
     logger.info("PUT /empreendimentos/%d", id)
     result = await update_empreendimento(id, data.model_dump(exclude_none=True))
     if not result:
@@ -120,7 +120,7 @@ async def update(id: int, data: EmpreendimentoUpdate):
     summary="Remover empreendimento",
     description="Remove um empreendimento pelo ID.",
 )
-async def delete(id: int):
+async def delete(id: int) -> Response:
     logger.info("DELETE /empreendimentos/%d", id)
     deleted = await delete_empreendimento(id)
     if not deleted:

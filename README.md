@@ -9,9 +9,11 @@ Este projeto implementa um backend completo com operações CRUD (Create, Read, 
 ## Stack Tecnológico
 
 - **FastAPI** — Framework web assíncrono com documentação Swagger/OpenAPI automática
-- **Supabase** — Backend-as-a-Service com PostgreSQL gerenciado
+- **Supabase** — Backend-as-a-Service com PostgreSQL gerenciado (acessado via REST API/PostgREST)
+- **httpx** — Cliente HTTP assíncrono para comunicação com a API REST do Supabase
 - **Pydantic v2** — Validação de dados com type hints e validators customizados
-- **Uvicorn** — Servidor ASGI de alta performance
+- **Uvicorn** — Servidor ASGI de alta performance (desenvolvimento local)
+- **Vercel** — Deploy serverless em produção
 - **Python 3.9+**
 
 ## Estrutura do Projeto
@@ -19,18 +21,21 @@ Este projeto implementa um backend completo com operações CRUD (Create, Read, 
 ```
 ├── README.md
 ├── requirements.txt
+├── vercel.json               # Configuração do deploy Vercel
 ├── .env.example
 ├── create_table.sql
+├── api/
+│   └── index.py              # Entrypoint Vercel (self-contained)
 ├── app/
 │   ├── __init__.py
-│   ├── main.py              # App FastAPI, CORS, rotas
+│   ├── main.py               # App FastAPI, CORS, rotas
 │   ├── config.py             # Variáveis de ambiente
 │   ├── schemas.py            # Modelos Pydantic com validadores
-│   ├── crud.py               # Operações CRUD com Supabase
-│   └── supabase_client.py    # Cliente Supabase singleton
+│   ├── crud.py               # Operações CRUD assíncronas com httpx
+│   └── supabase_client.py    # Factory de cliente httpx assíncrono
 └── tests/
     ├── __init__.py
-    ├── conftest.py            # Fixtures e mocks
+    ├── conftest.py            # Fixtures e mocks assíncronos
     ├── test_schemas.py        # Testes de validação
     └── test_api.py            # Testes de endpoints
 ```
@@ -45,7 +50,7 @@ Este projeto implementa um backend completo com operações CRUD (Create, Read, 
 
 1. **Clone o repositório:**
    ```bash
-   git clone <url-do-repositorio>
+   git clone https://github.com/ernestodeoliveira/desafio_pratico_sctec.git
    cd desafio_pratico_sctec
    ```
 
@@ -78,6 +83,15 @@ Este projeto implementa um backend completo com operações CRUD (Create, Read, 
 7. **Acesse a documentação:**
    - Swagger UI: http://localhost:8000/docs
    - ReDoc: http://localhost:8000/redoc
+
+## Deploy em Produção (Vercel)
+
+A API está disponível em produção via Vercel:
+
+- **API:** https://desafio-pratico-sctec-backend.vercel.app
+- **Swagger UI:** https://desafio-pratico-sctec-backend.vercel.app/docs
+
+O deploy utiliza o arquivo `api/index.py` como entrypoint serverless, que contém toda a aplicação em um único arquivo para compatibilidade com o runtime Python da Vercel.
 
 ## Endpoints da API
 
@@ -145,11 +159,13 @@ pytest -v
 
 - Arquitetura modular com separação de responsabilidades
 - Validação robusta com Pydantic v2 e validators customizados
-- Operações assíncronas (async/await)
+- Operações assíncronas com httpx.AsyncClient (não bloqueia o event loop)
 - HTTPExceptions com códigos de status corretos
 - Documentação Swagger completa com tags e descrições
 - CORS habilitado para integração com frontends
-- Testes automatizados com mocks
-- Type hints em todas as funções
-- Logging para rastreabilidade
+- Testes automatizados com mocks assíncronos
+- Type hints em todas as funções públicas
+- Herança em schemas para eliminar duplicação de código
+- Logging estruturado para rastreabilidade
 - Variáveis de ambiente para configuração segura
+- Context managers para gerenciamento de recursos (httpx clients)

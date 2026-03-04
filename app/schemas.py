@@ -75,60 +75,40 @@ SEGMENTOS: list[str] = [
 ]
 
 
-class EmpreendimentoCreate(BaseModel):
+class _EmpreendimentoBase(BaseModel):
+    """Shared fields and validators for empreendimento schemas."""
+
+    nome_empreendimento: str
+    nome_empreendedor: str
+    municipio: str
+    segmento: Literal["Tecnologia", "Comércio", "Indústria", "Serviços", "Agronegócio"]
+    email: Optional[EmailStr] = None
+    status: Literal["ativo", "inativo"] = "ativo"
+
+    @field_validator("nome_empreendimento", "nome_empreendedor")
+    @classmethod
+    def validate_nome(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 1 or len(v) > 255:
+            raise ValueError("Nome deve ter entre 1 e 255 caracteres")
+        return v
+
+    @field_validator("municipio")
+    @classmethod
+    def validate_municipio(cls, v: str) -> str:
+        if v not in MUNICIPIOS_SC:
+            raise ValueError(
+                f"Município '{v}' não é um município válido de Santa Catarina"
+            )
+        return v
+
+
+class EmpreendimentoCreate(_EmpreendimentoBase):
     """Schema for creating a new empreendimento."""
 
-    nome_empreendimento: str
-    nome_empreendedor: str
-    municipio: str
-    segmento: Literal["Tecnologia", "Comércio", "Indústria", "Serviços", "Agronegócio"]
-    email: Optional[EmailStr] = None
-    status: Literal["ativo", "inativo"] = "ativo"
 
-    @field_validator("nome_empreendimento", "nome_empreendedor")
-    @classmethod
-    def validate_nome(cls, v: str) -> str:
-        v = v.strip()
-        if len(v) < 1 or len(v) > 255:
-            raise ValueError("Nome deve ter entre 1 e 255 caracteres")
-        return v
-
-    @field_validator("municipio")
-    @classmethod
-    def validate_municipio(cls, v: str) -> str:
-        if v not in MUNICIPIOS_SC:
-            raise ValueError(
-                f"Município '{v}' não é um município válido de Santa Catarina"
-            )
-        return v
-
-
-class EmpreendimentoUpdate(BaseModel):
+class EmpreendimentoUpdate(_EmpreendimentoBase):
     """Schema for fully updating an empreendimento."""
-
-    nome_empreendimento: str
-    nome_empreendedor: str
-    municipio: str
-    segmento: Literal["Tecnologia", "Comércio", "Indústria", "Serviços", "Agronegócio"]
-    email: Optional[EmailStr] = None
-    status: Literal["ativo", "inativo"] = "ativo"
-
-    @field_validator("nome_empreendimento", "nome_empreendedor")
-    @classmethod
-    def validate_nome(cls, v: str) -> str:
-        v = v.strip()
-        if len(v) < 1 or len(v) > 255:
-            raise ValueError("Nome deve ter entre 1 e 255 caracteres")
-        return v
-
-    @field_validator("municipio")
-    @classmethod
-    def validate_municipio(cls, v: str) -> str:
-        if v not in MUNICIPIOS_SC:
-            raise ValueError(
-                f"Município '{v}' não é um município válido de Santa Catarina"
-            )
-        return v
 
 
 class EmpreendimentoResponse(BaseModel):

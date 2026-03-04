@@ -12,8 +12,8 @@ TABLE = "empreendimentos"
 async def create_empreendimento(data: dict) -> dict:
     """Insert a new empreendimento into the database."""
     logger.info("Creating empreendimento: %s", data.get("nome_empreendimento"))
-    with get_client() as client:
-        response = client.post(f"/{TABLE}", json=data)
+    async with get_client() as client:
+        response = await client.post(f"/{TABLE}", json=data)
         response.raise_for_status()
         return response.json()[0]
 
@@ -37,8 +37,8 @@ async def get_empreendimentos(
 
     headers = {"Range": f"{offset}-{offset + limit - 1}"}
 
-    with get_client() as client:
-        response = client.get(f"/{TABLE}", params=params, headers=headers)
+    async with get_client() as client:
+        response = await client.get(f"/{TABLE}", params=params, headers=headers)
         response.raise_for_status()
         result = response.json()
         logger.info("Listed %d empreendimentos", len(result))
@@ -47,8 +47,8 @@ async def get_empreendimentos(
 
 async def get_empreendimento_by_id(id: int) -> Optional[dict]:
     """Fetch a single empreendimento by ID."""
-    with get_client() as client:
-        response = client.get(f"/{TABLE}", params={"id": f"eq.{id}", "select": "*"})
+    async with get_client() as client:
+        response = await client.get(f"/{TABLE}", params={"id": f"eq.{id}", "select": "*"})
         response.raise_for_status()
         data = response.json()
         if not data:
@@ -59,8 +59,8 @@ async def get_empreendimento_by_id(id: int) -> Optional[dict]:
 async def update_empreendimento(id: int, data: dict) -> Optional[dict]:
     """Update an existing empreendimento."""
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    with get_client() as client:
-        response = client.patch(
+    async with get_client() as client:
+        response = await client.patch(
             f"/{TABLE}",
             params={"id": f"eq.{id}"},
             json=data,
@@ -75,8 +75,8 @@ async def update_empreendimento(id: int, data: dict) -> Optional[dict]:
 
 async def delete_empreendimento(id: int) -> bool:
     """Delete an empreendimento by ID."""
-    with get_client() as client:
-        response = client.delete(
+    async with get_client() as client:
+        response = await client.delete(
             f"/{TABLE}",
             params={"id": f"eq.{id}"},
         )
