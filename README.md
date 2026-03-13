@@ -153,7 +153,7 @@ pytest -v
 
 ## Vídeo Pitch
 
-[Vídeo demonstração da API (3min)](https://www.youtube.com/watch?v=gpK2nnzA4Es)
+[Vídeo demonstração da API](https://www.youtube.com/watch?v=gpK2nnzA4Es)
 
 ## Boas Práticas Utilizadas
 
